@@ -1,14 +1,11 @@
 from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from dotenv import load_dotenv
-import os
 import streamlit as st
-import time
 
-load_dotenv()
+st.set_page_config(page_title="AI 시인", page_icon="😎", layout="centered")
 
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = st.secrets["OPENAI_API_KEY"]
 
 st.markdown(
     """
@@ -28,33 +25,29 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 시 주제 : 입력 필드 (Input widgets -> TEXT -> st.text_input())
 title = st.text_input("시의 주제를 입력하세요.")
 st.write("시의 주제 :", title)
 
-# 시작성 요청: 버튼 (Input widgets -> BUTTONS -> st.button()
 if st.button("시 작성"):
-  with st.spinner("Wait for it..."):
-    #llm
-    llm = init_chat_model(
-    "gpt-5.4",
-    api_key=api_key,
-    temperature=0.7,
-    )
-    # 프롬프트 템플릿 생성
-    prompt = ChatPromptTemplate.from_messages([
-      ('system','너는 답변을 생성해주는 조력자'),
-      ('user',"{input}")
-    ])
+    if not title.strip():
+        st.warning("시의 주제를 먼저 입력하세요.")
+    else:
+        with st.spinner("시를 작성하는 중입니다..."):
+            llm = init_chat_model(
+                model="gpt-5.4",
+                model_provider="openai",
+                api_key=api_key,
+                temperature=0.7,
+            )
 
-    #출력 파서
-    output_parser = StrOutputParser()
-    
-    #체인실행
-    chain = prompt | llm | output_parser
-    response = chain.invoke({"input":title+"에 시를 생성해줘"})
-    print(response)
-    
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "너는 한국어로 자연스럽고 감성적인 시를 작성하는 AI 시인이다."),
+                ("user", "{input}")
+            ])
 
-    st.write(response)
+            output_parser = StrOutputParser()
+            chain = prompt | llm | output_parser
+            response = chain.invoke({"input": f"{title}에 대한 시를 생성해줘."})
 
+            st.subheader("생성된 시")
+            st.write(response)
